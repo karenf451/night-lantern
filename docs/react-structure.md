@@ -274,7 +274,7 @@ At minimum, I would commit:
 - `docs/bedtime-story-app-plan.md`
 - `docs/bedtime-story-schema-v0.2.md`
 - `docs/bedtime-story-controlled-vocabulary-v0.1.md`
-- `src/data/stories/lantern-at-the-orchard-gate.md`
+- `stories/lantern-at-the-orchard-gate.md`
 
 That way the project docs and the working app content live together.
 
