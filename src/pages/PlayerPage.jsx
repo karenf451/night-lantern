@@ -3,9 +3,13 @@ import { labelFromToken } from '../lib/formatters.js';
 import {
   chooseDefaultVoice,
   findVoiceByURI,
+  getStoryVoiceOptions,
   formatVoiceLabel,
   getSpeechSynthesis,
 } from '../lib/speech.js';
+
+const storedRateKey = 'night-lantern.playback-rate';
+const storedVoiceKey = 'night-lantern.voice-uri';
 
 export default function PlayerPage({ story, onBack }) {
   const synthRef = useRef(null);
@@ -13,10 +17,17 @@ export default function PlayerPage({ story, onBack }) {
   const stopRequestedRef = useRef(false);
   const [isSpeechSupported, setIsSpeechSupported] = useState(false);
   const [voices, setVoices] = useState([]);
-  const [selectedVoiceURI, setSelectedVoiceURI] = useState('');
-  const [rate, setRate] = useState(story.recommended_rate ?? 0.92);
+  const [selectedVoiceURI, setSelectedVoiceURI] = useState(readStoredVoiceURI);
+  const [rate, setRate] = useState(() =>
+    readStoredRate(story.recommended_rate ?? 0.92),
+  );
   const [playbackState, setPlaybackState] = useState('idle');
   const [statusMessage, setStatusMessage] = useState('');
+
+  const voiceOptions = useMemo(
+    () => getStoryVoiceOptions(voices, story.language),
+    [voices, story.language],
+  );
 
   const selectedVoice = useMemo(
     () => findVoiceByURI(voices, selectedVoiceURI),
@@ -39,10 +50,16 @@ export default function PlayerPage({ story, onBack }) {
       const availableVoices = synth.getVoices();
       setVoices(availableVoices);
       setSelectedVoiceURI((currentVoiceURI) => {
-        if (currentVoiceURI) {
+        if (
+          currentVoiceURI &&
+          availableVoices.some((voice) => voice.voiceURI === currentVoiceURI)
+        ) {
           return currentVoiceURI;
         }
-        const defaultVoice = chooseDefaultVoice(availableVoices, story.language);
+        const storyVoices = getStoryVoiceOptions(availableVoices, story.language);
+        const defaultVoice =
+          chooseDefaultVoice(storyVoices, story.language) ??
+          chooseDefaultVoice(availableVoices, story.language);
         return defaultVoice?.voiceURI ?? '';
       });
     }
@@ -148,9 +165,16 @@ export default function PlayerPage({ story, onBack }) {
     }
   }
 
+  function handleVoiceChange(event) {
+    const nextVoiceURI = event.target.value;
+    setSelectedVoiceURI(nextVoiceURI);
+    storePreference(storedVoiceKey, nextVoiceURI);
+  }
+
   function handleRateChange(event) {
     const nextRate = Number.parseFloat(event.target.value);
     setRate(nextRate);
+    storePreference(storedRateKey, nextRate.toString());
 
     if (playbackState === 'playing' || playbackState === 'paused') {
       setStatusMessage('Speed will change the next time playback starts.');
@@ -226,18 +250,16 @@ export default function PlayerPage({ story, onBack }) {
               <select
                 id="voice-select"
                 value={selectedVoiceURI}
-                onChange={(event) => setSelectedVoiceURI(event.target.value)}
+                onChange={handleVoiceChange}
                 disabled={!isSpeechSupported || voices.length === 0}
               >
-                {voices.length === 0 ? (
-                  <option value="">Browser default voice</option>
-                ) : (
-                  voices.map((voice) => (
+                <option value="">Browser default</option>
+                {voiceOptions.length > 0 &&
+                  voiceOptions.map((voice) => (
                     <option key={voice.voiceURI} value={voice.voiceURI}>
                       {formatVoiceLabel(voice)}
                     </option>
-                  ))
-                )}
+                  ))}
               </select>
             </label>
 
@@ -272,4 +294,48 @@ export default function PlayerPage({ story, onBack }) {
       </div>
     </section>
   );
+}
+
+function readStoredVoiceURI() {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  try {
+    return window.localStorage.getItem(storedVoiceKey) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function readStoredRate(fallbackRate) {
+  if (typeof window === 'undefined') {
+    return fallbackRate;
+  }
+
+  let storedRate = Number.NaN;
+
+  try {
+    storedRate = Number.parseFloat(
+      window.localStorage.getItem(storedRateKey) ?? '',
+    );
+  } catch {
+    return fallbackRate;
+  }
+
+  if (Number.isNaN(storedRate)) {
+    return fallbackRate;
+  }
+
+  return Math.min(1.1, Math.max(0.75, storedRate));
+}
+
+function storePreference(key, value) {
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.setItem(key, value);
+    } catch {
+      // Playback preferences are nice-to-have; the controls still work without storage.
+    }
+  }
 }
