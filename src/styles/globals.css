@@ -1,0 +1,261 @@
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background: var(--color-bg);
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  color: var(--color-text);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(209, 173, 106, 0.11), transparent 34rem),
+    linear-gradient(180deg, #10141d 0%, #0c1018 100%);
+  font-family: var(--font-body);
+  line-height: 1.5;
+}
+
+button {
+  min-height: 2.75rem;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  padding: 0.7rem 1rem;
+  color: var(--color-text);
+  background: var(--color-panel-strong);
+  font: inherit;
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent-soft);
+}
+
+button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+.app-shell {
+  width: min(1120px, calc(100% - 2rem));
+  margin: 0 auto;
+}
+
+.site-header {
+  display: flex;
+  align-items: center;
+  min-height: 5.5rem;
+}
+
+.brand-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-height: auto;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  background: transparent;
+}
+
+.brand-mark {
+  width: 1.6rem;
+  height: 1.6rem;
+  border: 1px solid var(--color-accent);
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--color-accent-soft) 0 22%, transparent 24%);
+  box-shadow: 0 0 26px rgba(209, 173, 106, 0.28);
+}
+
+.brand-title,
+.brand-subtitle {
+  display: block;
+}
+
+.brand-title {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.brand-subtitle {
+  color: var(--color-muted);
+  font-size: 0.85rem;
+}
+
+.app-main {
+  padding: 2rem 0 4rem;
+}
+
+.page-intro {
+  max-width: 45rem;
+  margin-bottom: 2rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.75rem;
+  color: var(--color-accent-soft);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  max-width: 12ch;
+  margin-bottom: 1rem;
+  font-size: clamp(2.4rem, 4vw, 4.7rem);
+  line-height: 1;
+}
+
+h2 {
+  margin-bottom: 0.75rem;
+  font-size: 1.35rem;
+}
+
+p {
+  color: var(--color-muted);
+}
+
+.story-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 21rem), 1fr));
+  gap: 1rem;
+}
+
+.story-card {
+  display: grid;
+  gap: 1rem;
+  min-height: 18rem;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  padding: 1.25rem;
+  background: rgba(27, 35, 48, 0.86);
+  box-shadow: var(--shadow-soft);
+}
+
+.story-card__meta,
+.story-card__footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.story-card__meta span,
+.story-card__footer span {
+  color: var(--color-muted);
+  font-size: 0.88rem;
+}
+
+.story-card__footer {
+  align-self: end;
+  justify-content: space-between;
+}
+
+.quiet-link {
+  min-height: auto;
+  margin-bottom: 1.5rem;
+  border: 0;
+  padding: 0;
+  color: var(--color-muted);
+  background: transparent;
+}
+
+.player-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.player-panel,
+.story-reader {
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  background: rgba(27, 35, 48, 0.88);
+  box-shadow: var(--shadow-soft);
+}
+
+.player-panel {
+  padding: 1.25rem;
+}
+
+.player-panel h1 {
+  max-width: 13ch;
+  font-size: clamp(2rem, 3vw, 3.5rem);
+}
+
+.story-details {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+}
+
+.story-details div {
+  display: grid;
+  grid-template-columns: 8rem 1fr;
+  gap: 1rem;
+  border-top: 1px solid var(--color-line);
+  padding-top: 0.75rem;
+}
+
+.story-details dt {
+  color: var(--color-faint);
+}
+
+.story-details dd {
+  margin: 0;
+  color: var(--color-text);
+}
+
+.player-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.story-reader {
+  max-height: 66vh;
+  overflow: auto;
+  padding: clamp(1.25rem, 3vw, 2rem);
+}
+
+.story-reader p {
+  color: #ded6c8;
+  font-family: var(--font-story);
+  font-size: 1.15rem;
+  line-height: 1.8;
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    width: min(100% - 1rem, 1120px);
+  }
+
+  .site-header {
+    min-height: 4.5rem;
+  }
+
+  .app-main {
+    padding-top: 1rem;
+  }
+
+  .player-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .story-details div {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+  }
+}

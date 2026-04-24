@@ -16,6 +16,21 @@ The first version is focused on a simple library, calm playback, adjustable spee
 
 - `docs/` — planning and implementation notes
 - `stories/` — canonical story files and examples
+- `src/` — React app source
+- `public/` — static app assets
+
+## Local development
+
+```bash
+npm install
+npm run dev
+```
+
+For a production build check:
+
+```bash
+npm run build
+```
 
 ## Notes
 
