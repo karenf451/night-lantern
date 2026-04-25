@@ -24,6 +24,8 @@ export default function PlayerPage({ story, onBack }) {
   const [playbackState, setPlaybackState] = useState('idle');
   const [statusMessage, setStatusMessage] = useState('');
   const [currentParagraphIndex, setCurrentParagraphIndex] = useState(0);
+  const isPlaybackActive =
+    playbackState === 'playing' || playbackState === 'paused';
 
   const voiceOptions = useMemo(
     () => getStoryVoiceOptions(voices, story.language),
@@ -333,7 +335,7 @@ export default function PlayerPage({ story, onBack }) {
                 id="voice-select"
                 value={selectedVoiceURI}
                 onChange={handleVoiceChange}
-                disabled={!isSpeechSupported || voices.length === 0}
+                disabled={!isSpeechSupported || voices.length === 0 || isPlaybackActive}
               >
                 <option value="">Browser default</option>
                 {voiceOptions.length > 0 &&
