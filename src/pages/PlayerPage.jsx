@@ -291,10 +291,6 @@ export default function PlayerPage({ story, onBack }) {
               <dt>Voice hint</dt>
               <dd>{labelFromToken(story.voice_hint)}</dd>
             </div>
-            <div>
-              <dt>Recommended rate</dt>
-              <dd>{story.recommended_rate}</dd>
-            </div>
           </dl>
 
           <div className="player-controls" aria-label="Playback controls">
@@ -354,7 +350,7 @@ export default function PlayerPage({ story, onBack }) {
             </label>
 
             <label className="control-field" htmlFor="rate-control">
-              <span>Speed {rate.toFixed(2)}x</span>
+              <span>Bedtime speed {rate.toFixed(2)}x</span>
               <input
                 id="rate-control"
                 type="range"
@@ -365,8 +361,18 @@ export default function PlayerPage({ story, onBack }) {
                 onChange={handleRateChange}
                 disabled={!isSpeechSupported}
               />
+              {Number.isFinite(story.recommended_rate) ? (
+                <span className="control-hint">
+                  Suggested for this story: {story.recommended_rate.toFixed(2)}x
+                </span>
+              ) : null}
             </label>
           </div>
+
+          <p className="device-note">
+            Voices come from your browser and device, so the list may differ on
+            desktop and iPhone.
+          </p>
 
           <p className="playback-status" aria-live="polite">
             {statusMessage ||

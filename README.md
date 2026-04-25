@@ -4,7 +4,9 @@ A gentle story app for sleep.
 
 ## Project status
 
-Early planning and prototype stage.
+V1 candidate. The first working milestone is complete: the app loads a small
+story library, opens stories, reads them aloud with browser speech synthesis,
+supports voice and speed controls, and keeps the interface calm.
 
 ## Current direction
 
@@ -26,11 +28,58 @@ npm install
 npm run dev
 ```
 
-For a production build check:
+Open the local URL Vite prints, usually:
+
+```text
+http://localhost:5173/
+```
+
+To test from an iPhone on the same Wi-Fi network:
+
+```bash
+npm run dev -- --host 0.0.0.0
+```
+
+Then open the network URL Vite prints in iPhone Safari.
+
+## Build check
 
 ```bash
 npm run build
 ```
+
+The production build outputs to `dist/`.
+
+## Deployment notes
+
+Night Lantern is a static Vite app. A simple public deployment can use Vercel,
+Netlify, or another static host.
+
+Suggested settings:
+
+- Install command: `npm install`
+- Build command: `npm run build`
+- Output directory: `dist`
+
+## Story files
+
+Stories live in `stories/` as Markdown files with front matter. The app validates
+that each story has the required v1 metadata fields and at least one body
+paragraph.
+
+If the story body starts with a matching `# Title`, the app skips that heading
+for playback so the title is not read twice.
+
+## Manual test checklist
+
+- Library shows all stories.
+- Length and mood filters work, including the empty state.
+- A story opens from the library.
+- Play, Pause, Resume, Stop, and Start over behave clearly.
+- The current paragraph marker follows playback.
+- Voice selection and speed controls work before playback starts.
+- Voice selection is disabled during playback.
+- iPhone Safari has comfortable top and bottom spacing.
 
 ## Notes
 

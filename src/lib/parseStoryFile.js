@@ -1,3 +1,15 @@
+const requiredFields = [
+  'id',
+  'version',
+  'title',
+  'summary',
+  'length',
+  'estimated_minutes',
+  'genre',
+  'mood',
+  'language',
+];
+
 export function parseStoryFile(rawFile, sourcePath) {
   const match = rawFile.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
 
@@ -13,12 +25,44 @@ export function parseStoryFile(rawFile, sourcePath) {
     .map((paragraph) => paragraph.trim())
     .filter(Boolean);
 
+  validateStory(metadata, paragraphs, sourcePath);
+
   return {
     ...metadata,
     sourcePath,
     body,
     paragraphs,
   };
+}
+
+function validateStory(metadata, paragraphs, sourcePath) {
+  const missingFields = requiredFields.filter(
+    (field) => !hasPresentValue(metadata[field]),
+  );
+
+  if (missingFields.length > 0) {
+    throw new Error(
+      `Story file is missing required front matter fields (${missingFields.join(
+        ', ',
+      )}): ${sourcePath}`,
+    );
+  }
+
+  if (paragraphs.length === 0) {
+    throw new Error(`Story file body is empty: ${sourcePath}`);
+  }
+}
+
+function hasPresentValue(value) {
+  if (value === undefined || value === null) {
+    return false;
+  }
+
+  if (typeof value === 'string') {
+    return value.trim() !== '';
+  }
+
+  return true;
 }
 
 function stripMatchingTitleHeading(body, title) {

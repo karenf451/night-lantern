@@ -10,6 +10,7 @@ html {
 body {
   min-width: 320px;
   min-height: 100vh;
+  min-height: 100svh;
   margin: 0;
   color: var(--color-text);
   background:
@@ -78,12 +79,15 @@ input:disabled {
 .app-shell {
   width: min(1120px, calc(100% - 2rem));
   margin: 0 auto;
+  padding-right: env(safe-area-inset-right);
+  padding-left: env(safe-area-inset-left);
 }
 
 .site-header {
   display: flex;
   align-items: center;
-  min-height: 5.5rem;
+  min-height: calc(5.5rem + env(safe-area-inset-top));
+  padding-top: env(safe-area-inset-top);
 }
 
 .brand-button {
@@ -122,7 +126,7 @@ input:disabled {
 }
 
 .app-main {
-  padding: 2rem 0 4rem;
+  padding: 2rem 0 calc(4rem + env(safe-area-inset-bottom));
 }
 
 .page-intro {
@@ -316,11 +320,22 @@ p {
   font-size: 0.92rem;
 }
 
+.control-hint {
+  color: var(--color-faint);
+  font-size: 0.85rem;
+}
+
 .playback-status {
   min-height: 1.5rem;
   margin: 1rem 0 0;
   color: var(--color-accent-soft);
   font-size: 0.92rem;
+}
+
+.device-note {
+  margin: 0.8rem 0 0;
+  color: var(--color-faint);
+  font-size: 0.88rem;
 }
 
 .story-reader {
@@ -353,15 +368,21 @@ p {
   }
 
   .site-header {
-    min-height: 4.5rem;
+    min-height: calc(4.5rem + env(safe-area-inset-top));
   }
 
   .app-main {
     padding-top: 1rem;
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
   }
 
   .player-layout {
     grid-template-columns: 1fr;
+  }
+
+  .story-reader {
+    max-height: none;
+    overflow: visible;
   }
 
   .filter-field {
