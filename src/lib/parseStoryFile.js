@@ -5,10 +5,10 @@ export function parseStoryFile(rawFile, sourcePath) {
     throw new Error(`Story file is missing front matter: ${sourcePath}`);
   }
 
-  const [, frontMatter, body] = match;
+  const [, frontMatter, rawBody] = match;
   const metadata = parseFrontMatter(frontMatter);
+  const body = stripMatchingTitleHeading(rawBody.trim(), metadata.title);
   const paragraphs = body
-    .trim()
     .split(/\n{2,}/)
     .map((paragraph) => paragraph.trim())
     .filter(Boolean);
@@ -16,9 +16,29 @@ export function parseStoryFile(rawFile, sourcePath) {
   return {
     ...metadata,
     sourcePath,
-    body: body.trim(),
+    body,
     paragraphs,
   };
+}
+
+function stripMatchingTitleHeading(body, title) {
+  const headingMatch = body.match(/^#\s+(.+?)\s*\n+/);
+
+  if (!headingMatch || !title) {
+    return body;
+  }
+
+  const [, headingTitle] = headingMatch;
+
+  if (normalizeTitle(headingTitle) !== normalizeTitle(title)) {
+    return body;
+  }
+
+  return body.slice(headingMatch[0].length).trim();
+}
+
+function normalizeTitle(title) {
+  return String(title).trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
 function parseFrontMatter(frontMatter) {
