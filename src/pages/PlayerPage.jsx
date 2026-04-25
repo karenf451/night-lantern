@@ -14,7 +14,7 @@ const storedVoiceKey = 'night-lantern.voice-uri';
 export default function PlayerPage({ story, onBack }) {
   const synthRef = useRef(null);
   const utteranceRef = useRef(null);
-  const stopRequestedRef = useRef(false);
+  const currentParagraphRef = useRef(null);
   const [isSpeechSupported, setIsSpeechSupported] = useState(false);
   const [voices, setVoices] = useState([]);
   const [selectedVoiceURI, setSelectedVoiceURI] = useState(readStoredVoiceURI);
@@ -23,6 +23,7 @@ export default function PlayerPage({ story, onBack }) {
   );
   const [playbackState, setPlaybackState] = useState('idle');
   const [statusMessage, setStatusMessage] = useState('');
+  const [currentParagraphIndex, setCurrentParagraphIndex] = useState(0);
 
   const voiceOptions = useMemo(
     () => getStoryVoiceOptions(voices, story.language),
@@ -73,11 +74,43 @@ export default function PlayerPage({ story, onBack }) {
       if (synth.onvoiceschanged === refreshVoices) {
         synth.onvoiceschanged = null;
       }
+      utteranceRef.current = null;
       synth.cancel();
     };
   }, [story.language]);
 
+  useEffect(() => {
+    const synth = synthRef.current;
+    utteranceRef.current = null;
+    synth?.cancel();
+    setCurrentParagraphIndex(0);
+    setPlaybackState('idle');
+    setStatusMessage('');
+  }, [story.id]);
+
+  useEffect(() => {
+    if (
+      (playbackState === 'playing' || playbackState === 'paused') &&
+      currentParagraphRef.current
+    ) {
+      currentParagraphRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }
+  }, [currentParagraphIndex, playbackState]);
+
   function playStory() {
+    const nextParagraphIndex =
+      playbackState === 'finished' ? 0 : currentParagraphIndex;
+    startPlaybackAt(nextParagraphIndex);
+  }
+
+  function startOver() {
+    startPlaybackAt(0);
+  }
+
+  function startPlaybackAt(paragraphIndex) {
     const synth = synthRef.current;
 
     if (!synth) {
@@ -85,10 +118,31 @@ export default function PlayerPage({ story, onBack }) {
       return;
     }
 
-    stopRequestedRef.current = false;
+    const safeParagraphIndex = getSafeParagraphIndex(
+      paragraphIndex,
+      story.paragraphs.length,
+    );
+    utteranceRef.current = null;
     synth.cancel();
+    setCurrentParagraphIndex(safeParagraphIndex);
+    setPlaybackState('playing');
+    setStatusMessage(
+      `Playing paragraph ${safeParagraphIndex + 1} of ${story.paragraphs.length}.`,
+    );
+    speakParagraph(safeParagraphIndex);
+  }
 
-    const utterance = new SpeechSynthesisUtterance(story.body);
+  function speakParagraph(paragraphIndex) {
+    const synth = synthRef.current;
+    const paragraph = story.paragraphs[paragraphIndex];
+
+    if (!synth || !paragraph) {
+      setPlaybackState('idle');
+      setStatusMessage('Nothing to play.');
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(paragraph);
     utterance.rate = rate;
     utterance.pitch = 1;
     utterance.lang = story.language ?? 'en';
@@ -99,34 +153,60 @@ export default function PlayerPage({ story, onBack }) {
     }
 
     utterance.onstart = () => {
+      if (utteranceRef.current !== utterance) {
+        return;
+      }
       setPlaybackState('playing');
-      setStatusMessage('Playing softly.');
+      setCurrentParagraphIndex(paragraphIndex);
+      setStatusMessage(
+        `Playing paragraph ${paragraphIndex + 1} of ${story.paragraphs.length}.`,
+      );
     };
 
     utterance.onpause = () => {
+      if (utteranceRef.current !== utterance) {
+        return;
+      }
       setPlaybackState('paused');
       setStatusMessage('Paused.');
     };
 
     utterance.onresume = () => {
+      if (utteranceRef.current !== utterance) {
+        return;
+      }
       setPlaybackState('playing');
-      setStatusMessage('Playing softly.');
+      setStatusMessage(
+        `Playing paragraph ${paragraphIndex + 1} of ${story.paragraphs.length}.`,
+      );
     };
 
     utterance.onend = () => {
+      if (utteranceRef.current !== utterance) {
+        return;
+      }
+
+      const nextParagraphIndex = paragraphIndex + 1;
+
+      if (nextParagraphIndex < story.paragraphs.length) {
+        setCurrentParagraphIndex(nextParagraphIndex);
+        speakParagraph(nextParagraphIndex);
+        return;
+      }
+
       utteranceRef.current = null;
-      setPlaybackState('idle');
-      setStatusMessage(stopRequestedRef.current ? 'Stopped.' : 'Finished.');
-      stopRequestedRef.current = false;
+      setPlaybackState('finished');
+      setStatusMessage('Finished.');
     };
 
     utterance.onerror = () => {
+      if (utteranceRef.current !== utterance) {
+        return;
+      }
+
       utteranceRef.current = null;
       setPlaybackState('idle');
-      setStatusMessage(
-        stopRequestedRef.current ? 'Stopped.' : 'Speech playback stopped unexpectedly.',
-      );
-      stopRequestedRef.current = false;
+      setStatusMessage('Speech playback stopped unexpectedly.');
     };
 
     utteranceRef.current = utterance;
@@ -157,9 +237,8 @@ export default function PlayerPage({ story, onBack }) {
     const synth = synthRef.current;
 
     if (synth?.speaking || synth?.paused) {
-      stopRequestedRef.current = true;
-      synth.cancel();
       utteranceRef.current = null;
+      synth.cancel();
       setPlaybackState('idle');
       setStatusMessage('Stopped.');
     }
@@ -242,6 +321,9 @@ export default function PlayerPage({ story, onBack }) {
             >
               Stop
             </button>
+            <button type="button" onClick={startOver} disabled={!isSpeechSupported}>
+              Start over
+            </button>
           </div>
 
           <div className="playback-settings">
@@ -287,8 +369,19 @@ export default function PlayerPage({ story, onBack }) {
         </div>
 
         <article className="story-reader">
-          {story.paragraphs.map((paragraph) => (
-            <p key={paragraph}>{paragraph}</p>
+          {story.paragraphs.map((paragraph, index) => (
+            <p
+              ref={index === currentParagraphIndex ? currentParagraphRef : null}
+              className={
+                index === currentParagraphIndex
+                  ? 'story-reader__paragraph story-reader__paragraph--current'
+                  : 'story-reader__paragraph'
+              }
+              aria-current={index === currentParagraphIndex ? 'true' : undefined}
+              key={paragraph}
+            >
+              {paragraph}
+            </p>
           ))}
         </article>
       </div>
@@ -306,6 +399,14 @@ function readStoredVoiceURI() {
   } catch {
     return '';
   }
+}
+
+function getSafeParagraphIndex(paragraphIndex, paragraphCount) {
+  if (paragraphCount <= 0) {
+    return 0;
+  }
+
+  return Math.min(paragraphCount - 1, Math.max(0, paragraphIndex));
 }
 
 function readStoredRate(fallbackRate) {

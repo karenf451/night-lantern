@@ -280,11 +280,22 @@ p {
   padding: clamp(1.25rem, 3vw, 2rem);
 }
 
-.story-reader p {
+.story-reader__paragraph {
+  border-left: 2px solid transparent;
+  margin-bottom: 1.25rem;
+  padding-left: 0.9rem;
   color: #ded6c8;
   font-family: var(--font-story);
   font-size: 1.15rem;
   line-height: 1.8;
+  scroll-margin: 2rem;
+}
+
+.story-reader__paragraph--current {
+  border-color: var(--color-accent);
+  border-radius: 4px;
+  color: var(--color-text);
+  background: rgba(209, 173, 106, 0.07);
 }
 
 @media (max-width: 760px) {
