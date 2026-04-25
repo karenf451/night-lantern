@@ -6,6 +6,10 @@ import { stories } from './lib/stories.js';
 
 export default function App() {
   const [selectedStoryId, setSelectedStoryId] = useState(null);
+  const [libraryFilters, setLibraryFilters] = useState({
+    length: 'all',
+    mood: 'all',
+  });
 
   const selectedStory = useMemo(
     () => stories.find((story) => story.id === selectedStoryId) ?? null,
@@ -27,7 +31,12 @@ export default function App() {
         {selectedStory ? (
           <PlayerPage story={selectedStory} onBack={returnToLibrary} />
         ) : (
-          <LibraryPage stories={stories} onOpenStory={openStory} />
+          <LibraryPage
+            stories={stories}
+            filters={libraryFilters}
+            onFiltersChange={setLibraryFilters}
+            onOpenStory={openStory}
+          />
         )}
       </main>
     </div>
