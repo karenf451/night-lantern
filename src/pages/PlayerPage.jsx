@@ -231,7 +231,9 @@ export default function PlayerPage({ story, onBack }) {
     if (synth?.paused) {
       synth.resume();
       setPlaybackState('playing');
-      setStatusMessage('Playing softly.');
+      setStatusMessage(
+        `Playing paragraph ${currentParagraphIndex + 1} of ${story.paragraphs.length}.`,
+      );
     }
   }
 
@@ -296,7 +298,11 @@ export default function PlayerPage({ story, onBack }) {
           </dl>
 
           <div className="player-controls" aria-label="Playback controls">
-            <button type="button" onClick={playStory} disabled={!isSpeechSupported}>
+            <button
+              type="button"
+              onClick={playStory}
+              disabled={!isSpeechSupported || isPlaybackActive}
+            >
               Play
             </button>
             <button
