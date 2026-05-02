@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { labelFromToken } from '../lib/formatters.js';
 import {
-  chooseDefaultVoice,
+  getBrowserLanguagePreferences,
+  getSuggestedVoiceGroups,
   findVoiceByURI,
-  getStoryVoiceOptions,
   formatVoiceLabel,
   getSpeechSynthesis,
 } from '../lib/speech.js';
@@ -14,10 +14,12 @@ const storedVoiceKey = 'night-lantern.voice-uri';
 export default function PlayerPage({ story, onBack }) {
   const synthRef = useRef(null);
   const utteranceRef = useRef(null);
+  const previewUtteranceRef = useRef(null);
   const currentParagraphRef = useRef(null);
   const [isSpeechSupported, setIsSpeechSupported] = useState(false);
   const [voices, setVoices] = useState([]);
   const [selectedVoiceURI, setSelectedVoiceURI] = useState(readStoredVoiceURI);
+  const [preferredLanguages] = useState(getBrowserLanguagePreferences);
   const [rate, setRate] = useState(() =>
     readStoredRate(story.recommended_rate ?? 0.92),
   );
@@ -27,15 +29,19 @@ export default function PlayerPage({ story, onBack }) {
   const isPlaybackActive =
     playbackState === 'playing' || playbackState === 'paused';
 
-  const voiceOptions = useMemo(
-    () => getStoryVoiceOptions(voices, story.language),
-    [voices, story.language],
+  const { suggestedVoices, otherVoices } = useMemo(
+    () => getSuggestedVoiceGroups(voices, story.language, preferredLanguages),
+    [voices, story.language, preferredLanguages],
   );
 
   const selectedVoice = useMemo(
     () => findVoiceByURI(voices, selectedVoiceURI),
     [voices, selectedVoiceURI],
   );
+
+  const selectedVoiceLabel = selectedVoice
+    ? formatVoiceLabel(selectedVoice)
+    : 'Browser default';
 
   useEffect(() => {
     const synth = getSpeechSynthesis();
@@ -54,16 +60,18 @@ export default function PlayerPage({ story, onBack }) {
       setVoices(availableVoices);
       setSelectedVoiceURI((currentVoiceURI) => {
         if (
-          currentVoiceURI &&
+          !currentVoiceURI ||
+          availableVoices.length === 0 ||
           availableVoices.some((voice) => voice.voiceURI === currentVoiceURI)
         ) {
           return currentVoiceURI;
         }
-        const storyVoices = getStoryVoiceOptions(availableVoices, story.language);
-        const defaultVoice =
-          chooseDefaultVoice(storyVoices, story.language) ??
-          chooseDefaultVoice(availableVoices, story.language);
-        return defaultVoice?.voiceURI ?? '';
+
+        clearPreference(storedVoiceKey);
+        setStatusMessage(
+          'Your saved voice is not available in this browser. Using Browser default.',
+        );
+        return '';
       });
     }
 
@@ -77,9 +85,10 @@ export default function PlayerPage({ story, onBack }) {
         synth.onvoiceschanged = null;
       }
       utteranceRef.current = null;
+      previewUtteranceRef.current = null;
       synth.cancel();
     };
-  }, [story.language]);
+  }, []);
 
   useEffect(() => {
     const synth = synthRef.current;
@@ -251,7 +260,18 @@ export default function PlayerPage({ story, onBack }) {
   function handleVoiceChange(event) {
     const nextVoiceURI = event.target.value;
     setSelectedVoiceURI(nextVoiceURI);
-    storePreference(storedVoiceKey, nextVoiceURI);
+    if (nextVoiceURI) {
+      storePreference(storedVoiceKey, nextVoiceURI);
+    } else {
+      clearPreference(storedVoiceKey);
+    }
+
+    const nextVoice = findVoiceByURI(voices, nextVoiceURI);
+    setStatusMessage(
+      nextVoice
+        ? `Voice changed to ${nextVoice.name}.`
+        : 'Using Browser default voice.',
+    );
   }
 
   function handleRateChange(event) {
@@ -262,6 +282,51 @@ export default function PlayerPage({ story, onBack }) {
     if (playbackState === 'playing' || playbackState === 'paused') {
       setStatusMessage('Speed will change the next time playback starts.');
     }
+  }
+
+  function previewVoice() {
+    const synth = synthRef.current;
+
+    if (!synth) {
+      setStatusMessage('Speech playback is not available in this browser.');
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(
+      'A small lantern glows, and the story settles softly for bedtime.',
+    );
+    utterance.rate = rate;
+    utterance.pitch = 1;
+    utterance.lang = story.language ?? 'en';
+
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+      utterance.lang = selectedVoice.lang;
+    }
+
+    utterance.onstart = () => {
+      if (previewUtteranceRef.current === utterance) {
+        setStatusMessage(`Previewing ${selectedVoiceLabel}.`);
+      }
+    };
+
+    utterance.onend = () => {
+      if (previewUtteranceRef.current === utterance) {
+        previewUtteranceRef.current = null;
+        setStatusMessage('Preview finished.');
+      }
+    };
+
+    utterance.onerror = () => {
+      if (previewUtteranceRef.current === utterance) {
+        previewUtteranceRef.current = null;
+        setStatusMessage('Voice preview stopped unexpectedly.');
+      }
+    };
+
+    previewUtteranceRef.current = utterance;
+    synth.cancel();
+    synth.speak(utterance);
   }
 
   return (
@@ -331,8 +396,13 @@ export default function PlayerPage({ story, onBack }) {
           </div>
 
           <div className="playback-settings">
+            <div className="current-voice" aria-live="polite">
+              <span>Current voice</span>
+              <strong>{selectedVoiceLabel}</strong>
+            </div>
+
             <label className="control-field" htmlFor="voice-select">
-              <span>Voice</span>
+              <span>Change voice</span>
               <select
                 id="voice-select"
                 value={selectedVoiceURI}
@@ -340,14 +410,41 @@ export default function PlayerPage({ story, onBack }) {
                 disabled={!isSpeechSupported || voices.length === 0 || isPlaybackActive}
               >
                 <option value="">Browser default</option>
-                {voiceOptions.length > 0 &&
-                  voiceOptions.map((voice) => (
-                    <option key={voice.voiceURI} value={voice.voiceURI}>
-                      {formatVoiceLabel(voice)}
-                    </option>
-                  ))}
+                {suggestedVoices.length > 0 ? (
+                  <optgroup label="Suggested voices">
+                    {suggestedVoices.map((voice) => (
+                      <option key={voice.voiceURI} value={voice.voiceURI}>
+                        {formatVoiceLabel(voice)}
+                      </option>
+                    ))}
+                  </optgroup>
+                ) : null}
+                {otherVoices.length > 0 ? (
+                  <optgroup
+                    label={
+                      suggestedVoices.length > 0
+                        ? 'Other available voices'
+                        : 'Available voices'
+                    }
+                  >
+                    {otherVoices.map((voice) => (
+                      <option key={voice.voiceURI} value={voice.voiceURI}>
+                        {formatVoiceLabel(voice)}
+                      </option>
+                    ))}
+                  </optgroup>
+                ) : null}
               </select>
             </label>
+
+            <button
+              className="preview-button"
+              type="button"
+              onClick={previewVoice}
+              disabled={!isSpeechSupported || isPlaybackActive}
+            >
+              Preview voice
+            </button>
 
             <label className="control-field" htmlFor="rate-control">
               <span>Bedtime speed {rate.toFixed(2)}x</span>
@@ -371,7 +468,8 @@ export default function PlayerPage({ story, onBack }) {
 
           <p className="device-note">
             Voices come from your browser and device, so the list may differ on
-            desktop and iPhone.
+            desktop and iPhone. Suggestions use the story language and your
+            browser language settings.
           </p>
 
           <p className="playback-status" aria-live="polite">
@@ -449,6 +547,16 @@ function storePreference(key, value) {
   if (typeof window !== 'undefined') {
     try {
       window.localStorage.setItem(key, value);
+    } catch {
+      // Playback preferences are nice-to-have; the controls still work without storage.
+    }
+  }
+}
+
+function clearPreference(key) {
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.removeItem(key);
     } catch {
       // Playback preferences are nice-to-have; the controls still work without storage.
     }
